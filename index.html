@@ -22,15 +22,12 @@
         .sound-message { font-size: 24px; font-weight: bold; margin: 15px 0; min-height: 35px; text-align: center; }
         .correct-sound { color: #2f855a; }
         .incorrect-sound { color: #c53030; }
-        #setupArea { margin-top: 20px; border-top: 3px dashed #999; padding-top: 20px; text-align: left; }
-        textarea { width: 100%; height: 130px; padding: 10px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; border: 2px solid #333; }
-        .start-action-btn { background-color: #333; color: white; border: none; padding: 15px; width: 100%; font-size: 18px; cursor: pointer; font-weight: bold; border-radius: 6px; }
         .exception-check { font-size: 16px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; gap: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <table class="display-table"><tr><td id="japaneseText">※まず一番下の入力枠に10問のデータを貼り付けて、黒いボタンを押してください。</td></tr></table>
+    <table class="display-table"><tr><td id="japaneseText">読み込み中...</td></tr></table>
     <div class="answer-row"><div id="userAnswer" class="user-ans-text"></div><button class="show-ans-btn" onclick="showCorrectAnswer()">【正解文】</button></div>
     <div id="soundOutput" class="sound-message"></div>
     <div class="choices-grid">
@@ -39,67 +36,40 @@
         <button id="c6" class="choice-btn" onclick="pressWord(6)" disabled></button><button id="c7" class="choice-btn" onclick="pressWord(7)" disabled></button><button id="c8" class="choice-btn" onclick="pressWord(8)" disabled></button>
     </div>
     <div class="control-row">
-        <button class="ctrl-btn" onclick="window.close()">Close</button><button class="ctrl-btn" onclick="focusInput()">Open</button><button class="ctrl-btn" onclick="clearCurrentTry()">Clear</button><button id="startNextBtn" class="ctrl-btn" onclick="pressStartNext()">Start</button>
+        <button class="ctrl-btn" onclick="window.close()">Close</button><button class="ctrl-btn" onclick="initGame()">Open</button><button class="ctrl-btn" onclick="clearCurrentTry()">Clear</button><button id="startNextBtn" class="ctrl-btn" onclick="pressStartNext()">Start</button>
     </div>
     <div class="exception-check"><input type="checkbox" id="noCapitalCheck" style="transform: scale(1.3);"><label for="noCapitalCheck">文頭を大文字にしない（例外用）</label></div>
-    <div id="setupArea">
-        <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; color: #333;">【問題データ入力窓】ここにファイルを貼り付けます：</p>
-        <textarea id="fileDataInput" placeholder="お持ちのテキストファイル（10問分）をここに丸ごと貼り付けてください"></textarea>
-        <button class="start-action-btn" onclick="loadTextData()">データをアプリに読み込む（OK）</button>
-    </div>
 </div>
 <script>
-    let questions = []; let currentIdx = 0; let selectedWords = []; let currentChoices = []; let isAnswered = false;
-    function parseTextData(text) {
-        const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(l => l.length > 0); const parsed = [];
-        for (let i = 0; i < lines.length; i++) {
-            const curLine = lines[i];
-            if (/[ぁ-んァ-ン一-龠々]/.test(curLine)) {
-                if (curLine.includes("File:") || curLine.includes("完了") || curLine.includes("継続") || curLine.includes("Sent")) continue;
-                const hint = curLine;
-                if (i + 1 < lines.length) {
-                    const answer = lines[i + 1]; const choices = []; let j = i + 2;
-                    while (j < lines.length && !/[ぁ-んァ-ン一-龠々]/.test(lines[j])) {
-                        if (!lines[j].includes("File:") && !lines[j].includes("Sent")) {
-                            if (lines[j].includes("/")) { lines[j].split("/").map(w => w.trim()).filter(w => w.length > 0).forEach(w => choices.push(w)); } 
-                            else { choices.push(lines[j]); }
-                        }
-                        j++;
-                    }
-                    if (hint && answer && choices.length > 0) { parsed.push({ hint: hint, answer: answer, choices: choices }); }
-                    i = j - 1;
-                }
-            }
-        }
-        return parsed;
-    }
-    function focusInput() { document.getElementById("fileDataInput").focus(); }
-    function loadTextData() {
-        const input = document.getElementById("fileDataInput").value; questions = parseTextData(input);
-        if (questions.length === 0) { alert("データの読み込みに失敗しました。形式を確認してください。"); return; }
-        document.getElementById("startNextBtn").textContent = "Start"; currentIdx = 0; initGame();
-    }
+    // ★先生の10問のデータを最初からプログラムの中に埋め込みました！
+    const questions = [
+        { hint: "私は2001年からこの机を使っています｡", answer: "I have used this desk since 2001.", choices: ["used", "I", "have", "since", "this desk", "2001", "for", "."] },
+        { hint: "私は3年間英語を勉強しています｡", answer: "I have studied English for three years.", choices: ["studied", "I", "English", "for", "since", "three years", "have", "."] },
+        { hint: "私は日本に2000年から住んでいます｡", answer: "I have lived in Japan since 2000.", choices: ["2000", "have", "since", "for", "I", "lived in", "Japan", "."] },
+        { hint: "彼は名古屋に６か月間住んでいます｡", answer: "He has lived in Nagoya for six months.", choices: ["has", "he", "for", "since", "lived", "in Nagoya", "six months", "."] },
+        { hint: "彼女は日本語を1998年から習っています｡", answer: "She has learned Japanese since 1998.", choices: ["since", "for", "has", "learned", "Japanese", "she", "1998", "."] },
+        { hint: "私たちは昨日からテレビを見ています｡", answer: "We have watched TV since yesterday.", choices: ["for", "since", "yesterday", "we", "watched TV", "have", "are", "."] },
+        { hint: "彼はこの車を１０年間使っています｡", answer: "He has used this car for ten years.", choices: ["this car", "for", "since", "has", "he", "ten years", "used", "."] },
+        { hint: "彼らはここに去年から住んでいます｡", answer: "They have lived here since last year.", choices: ["have", "they", "here", "lived", "since", "for", "last year", "."] },
+        { hint: "私はこの本を昨夜から読んでいます｡", answer: "I have read this book since last night.", choices: ["have", "since", "for", "this book", "read", "I", "last night", "."] },
+        { hint: "私はこの本を昨夜読みました｡", answer: "I read this book last night.", choices: ["read", "this book", "have", "I", "was", "since", "for", "last night."] }
+    ];
+
+    let currentIdx = 0; let selectedWords = []; let currentChoices = []; let isAnswered = false;
+
     function pressStartNext() {
         const btn = document.getElementById("startNextBtn");
-        if (btn.textContent === "Start") {
-            if (questions.length === 0) { alert("まずデータを入力枠に貼り付けて、黒いボタンを押してください。"); return; }
-            initGame();
-        } else {
+        if (btn.textContent === "Start") { initGame(); } 
+        else {
             currentIdx++;
             if (currentIdx >= questions.length) {
-                alert("全問クリアしました！次のファイルを下の枠に貼り付けてください。");
-                document.getElementById("startNextBtn").textContent = "Start";
-                document.getElementById("japaneseText").textContent = "全問クリアしました。次のファイルを下に貼り付けてください。";
-                document.getElementById("fileDataInput").value = ""; clearBoard();
+                alert("全問クリアしました！おめでとうございます！");
+                currentIdx = 0; initGame();
             } else { initGame(); }
         }
     }
-    function clearBoard() {
-        document.getElementById("userAnswer").textContent = ""; document.getElementById("soundOutput").textContent = "";
-        for (let i = 0; i < 9; i++) { const btn = document.getElementById(`c${i}`); btn.textContent = ""; btn.disabled = true; }
-    }
     function initGame() {
-        if (questions.length === 0) return; const q = questions[currentIdx];
+        const q = questions[currentIdx];
         document.getElementById("japaneseText").textContent = q.hint; document.getElementById("userAnswer").textContent = "";
         document.getElementById("soundOutput").textContent = ""; document.getElementById("soundOutput").className = "sound-message";
         document.getElementById("startNextBtn").textContent = "Start"; selectedWords = []; isAnswered = false;
@@ -129,6 +99,27 @@
         });
         document.getElementById("userAnswer").textContent = sentence;
     }
-    function clearCurrentTry() { if (questions.length === 0) return; initGame(); }
+    function clearCurrentTry() { initGame(); }
     function showCorrectAnswer() {
-        if (questions.length === 0) return; const q = questions[currentIdx];
+        const q = questions[currentIdx]; document.getElementById("userAnswer").textContent = q.answer;
+        isAnswered = true; document.getElementById("startNextBtn").textContent = "Next";
+    }
+    function checkAnswer() {
+        const q = questions[currentIdx];
+        let userStr = document.getElementById("userAnswer").textContent.trim().toLowerCase();
+        let targetStr = q.answer.trim().toLowerCase();
+        userStr = userStr.replace(/\s+/g, " ").replace(/\s+\./g, ".").replace(/\s+\?/g, "?");
+        targetStr = targetStr.replace(/\s+/g, " ").replace(/\s+\./g, ".").replace(/\s+\?/g, "?");
+        const soundEl = document.getElementById("soundOutput");
+        if (userStr === targetStr) {
+            soundEl.textContent = "🎵 ピンポーン！ (正解)"; soundEl.className = "sound-message correct-sound";
+            document.getElementById("userAnswer").textContent = q.answer; document.getElementById("startNextBtn").textContent = "Next"; isAnswered = true;
+        } else {
+            soundEl.textContent = "🔊 ブーーー！ (不正解)"; soundEl.className = "sound-message incorrect-sound";
+        }
+    }
+    // 起動時に自動スタート
+    window.onload = function() { initGame(); };
+</script>
+</body>
+</html>
