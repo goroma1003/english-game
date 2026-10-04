@@ -41,7 +41,6 @@
     <div class="exception-check"><input type="checkbox" id="noCapitalCheck" style="transform: scale(1.3);"><label for="noCapitalCheck">文頭を大文字にしない（例外用）</label></div>
 </div>
 <script>
-    // ★先生の10問のデータを最初からプログラムの中に埋め込みました！
     const questions = [
         { hint: "私は2001年からこの机を使っています｡", answer: "I have used this desk since 2001.", choices: ["used", "I", "have", "since", "this desk", "2001", "for", "."] },
         { hint: "私は3年間英語を勉強しています｡", answer: "I have studied English for three years.", choices: ["studied", "I", "English", "for", "since", "three years", "have", "."] },
@@ -56,6 +55,35 @@
     ];
 
     let currentIdx = 0; let selectedWords = []; let currentChoices = []; let isAnswered = false;
+
+    // ★安全にパソコンから本物の音を合成して鳴らす魔法のオーディオ機能
+    let audioCtx = null;
+    function playSound(type) {
+        try {
+            if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'correct') {
+                // ピンポーンの音（高い音を2回ポポンと鳴らす）
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // ド
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15); // ミ
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            } else {
+                // ブーーの音（低い濁った音を長めに鳴らす）
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+            }
+        } catch (e) { console.log("Audio Error", e); }
+    }
 
     function pressStartNext() {
         const btn = document.getElementById("startNextBtn");
@@ -106,20 +134,3 @@
     }
     function checkAnswer() {
         const q = questions[currentIdx];
-        let userStr = document.getElementById("userAnswer").textContent.trim().toLowerCase();
-        let targetStr = q.answer.trim().toLowerCase();
-        userStr = userStr.replace(/\s+/g, " ").replace(/\s+\./g, ".").replace(/\s+\?/g, "?");
-        targetStr = targetStr.replace(/\s+/g, " ").replace(/\s+\./g, ".").replace(/\s+\?/g, "?");
-        const soundEl = document.getElementById("soundOutput");
-        if (userStr === targetStr) {
-            soundEl.textContent = "🎵 ピンポーン！ (正解)"; soundEl.className = "sound-message correct-sound";
-            document.getElementById("userAnswer").textContent = q.answer; document.getElementById("startNextBtn").textContent = "Next"; isAnswered = true;
-        } else {
-            soundEl.textContent = "🔊 ブーーー！ (不正解)"; soundEl.className = "sound-message incorrect-sound";
-        }
-    }
-    // 起動時に自動スタート
-    window.onload = function() { initGame(); };
-</script>
-</body>
-</html>
